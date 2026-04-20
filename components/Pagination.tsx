@@ -37,7 +37,7 @@ export function Pagination({
   return (
     <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
       <div className="text-sm text-muted-foreground">
-        Showing {start} to {end} of <span className="font-semibold text-foreground">{totalItems}</span> companies
+        Showing {start} to {end} of <span className="font-semibold text-foreground">{totalItems}</span> entities
       </div>
       <div className="flex gap-2">
         <Button

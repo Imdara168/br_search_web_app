@@ -15,10 +15,10 @@ export function CompanyList({ companies, onDelete }: CompanyListProps) {
   if (companies.length === 0) {
     return (
       <Card className="bg-card border-border p-8 text-center">
-        <p className="text-muted-foreground mb-4">No companies found</p>
+        <p className="text-muted-foreground mb-4">No entities found</p>
         <Link href="/create">
           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            Create First Company
+            Create First Entity
           </Button>
         </Link>
       </Card>

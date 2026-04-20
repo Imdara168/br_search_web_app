@@ -17,8 +17,17 @@ export interface CompanyFormData {
   khmerName: string;
 }
 
+export interface ApiMessageResponse {
+  message?: string;
+}
+
 export interface User {
   fullname: string;
+}
+
+export interface ChangePasswordData {
+  old_password: string;
+  new_password: string;
 }
 
 export interface SignInResponse {

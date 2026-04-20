@@ -31,7 +31,7 @@ export function CompanyForm({
   initialData,
   onSubmit,
   isLoading = false,
-  submitButtonLabel = 'Create Company',
+  submitButtonLabel = 'Create Entity',
   isDuplicate = () => false,
 }: CompanyFormProps) {
   const { toast } = useToast()
@@ -56,7 +56,7 @@ export function CompanyForm({
     const normalizedCurrent = initialData?.englishName.toLowerCase().replace(/[\s,.]/g, '') || ''
 
     if (normalizedInput === normalizedCurrent) {
-      // Same company, allow update
+      // Same entity, allow update
       onSubmit(data)
       return
     }
@@ -64,8 +64,8 @@ export function CompanyForm({
     if (isDuplicate(data.englishName, initialData?.englishName)) {
       toast({
         variant: 'destructive',
-        title: 'Duplicate Company',
-        description: 'A company with this name already exists',
+        title: 'Duplicate Entity',
+        description: 'An entity with this name already exists',
       })
       return
     }
@@ -82,7 +82,7 @@ export function CompanyForm({
           </label>
           <Input
             {...register('englishName')}
-            placeholder="Enter company name in English"
+            placeholder="Enter entity name in English"
             className="bg-secondary border-border text-foreground placeholder-muted-foreground"
             disabled={isLoading}
           />
@@ -99,7 +99,7 @@ export function CompanyForm({
           </label>
           <Input
             {...register('khmerName')}
-            placeholder="វាយបញ្ចូលឈ្មោះក្រុមហ៊ុន"
+            placeholder="វាយបញ្ចូលឈ្មោះអង្គភាព"
             className="bg-secondary border-border text-foreground placeholder-muted-foreground"
             disabled={isLoading}
           />

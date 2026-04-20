@@ -69,7 +69,7 @@ export default function CreatePage() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to create company',
+        description: 'Failed to create entity',
       })
     } finally {
       setIsLoading(false)
@@ -97,7 +97,7 @@ export default function CreatePage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to import companies')
+        throw new Error('Failed to import entities')
       }
 
       const result = await response.json()
@@ -113,7 +113,7 @@ export default function CreatePage() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to import companies',
+        description: error.message || 'Failed to import entities',
       })
     } finally {
       setIsLoading(false)
@@ -138,7 +138,7 @@ export default function CreatePage() {
             className="text-muted-foreground hover:text-foreground gap-2 mb-8"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Companies
+            Back to Entities
           </Button>
         </Link>
 
@@ -146,10 +146,10 @@ export default function CreatePage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-2">
-              Create New Company
+              Create New Entity
             </h1>
             <p className="text-muted-foreground">
-              Add a new company to your list or import from Excel
+              Add a new entity to your list or import from Excel
             </p>
           </div>
 
@@ -180,7 +180,7 @@ export default function CreatePage() {
             <CompanyForm
               onSubmit={handleSubmit}
               isLoading={isLoading}
-              submitButtonLabel="Create Company"
+              submitButtonLabel="Create Entity"
               isDuplicate={isDuplicate}
             />
           </div>

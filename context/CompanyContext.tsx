@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { Company, CompanyFormData, Registration } from '@/lib/types'
+import { ApiMessageResponse, Company, CompanyFormData, Registration } from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
 
 interface CompanyContextType {
@@ -9,8 +9,8 @@ interface CompanyContextType {
   isLoading: boolean
   addCompany: (data: CompanyFormData) => void
   bulkAddCompanies: (data: CompanyFormData[]) => void
-  updateCompany: (id: string, data: CompanyFormData) => void
-  deleteCompany: (id: string) => void
+  updateCompany: (id: string, data: CompanyFormData) => Promise<ApiMessageResponse>
+  deleteCompany: (id: string) => Promise<ApiMessageResponse>
   searchCompanies: (query: string) => void
   getCompanyById: (id: string) => Company | undefined
 }
@@ -68,20 +68,27 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, fetchRegistrations])
 
   const addCompany = useCallback((data: CompanyFormData) => {
+    const id = Date.now().toString()
     const newCompany: Company = {
-      id: Date.now().toString(),
+      id,
       ...data,
+      slug: id,
       createdAt: new Date().toISOString(),
     }
     setCompanies((prev) => [newCompany, ...prev])
   }, [])
 
   const bulkAddCompanies = useCallback((data: CompanyFormData[]) => {
-    const newCompanies: Company[] = data.map((company, index) => ({
-      id: (Date.now() + index).toString(),
-      ...company,
-      createdAt: new Date().toISOString(),
-    }))
+    const newCompanies: Company[] = data.map((company, index) => {
+      const id = (Date.now() + index).toString()
+
+      return {
+        id,
+        ...company,
+        slug: id,
+        createdAt: new Date().toISOString(),
+      }
+    })
     setCompanies((prev) => [...newCompanies, ...prev])
   }, [])
 

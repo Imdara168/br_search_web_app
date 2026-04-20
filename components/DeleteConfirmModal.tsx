@@ -31,7 +31,7 @@ export function DeleteConfirmModal({
       <AlertDialogContent className="bg-card border-border">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-foreground">
-            Delete Company?
+            Delete Entity?
           </AlertDialogTitle>
           <AlertDialogDescription className="text-muted-foreground">
             Are you sure you want to delete <span className="font-semibold text-foreground">{companyName}</span>?

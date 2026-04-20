@@ -107,7 +107,7 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
         onDataLoaded(companies)
         toast({
           title: 'Success',
-          description: `Found ${companies.length} companies in the file`,
+          description: `Found ${companies.length} entities in the file`,
         })
       } catch (error) {
         toast({
@@ -180,7 +180,7 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
             Import from Excel
           </h3>
           <p className="text-sm text-muted-foreground">
-            Upload an Excel file with English and Khmer company names. The system will automatically detect which column contains which language.
+            Upload an Excel file with English and Khmer entity names. The system will automatically detect which column contains which language.
           </p>
         </div>
 

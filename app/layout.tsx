@@ -11,8 +11,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Company Manager',
-  description: 'Manage your companies with ease',
+  title: 'Entity Manager',
+  description: 'Manage your entities with ease',
   generator: 'v0.app',
   icons: {
     icon: [

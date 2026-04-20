@@ -10,15 +10,16 @@ import { CompanyList } from '@/components/CompanyList'
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Pagination } from '@/components/Pagination'
+import { UserProfileMenu } from '@/components/UserProfileMenu'
 import { Button } from '@/components/ui/button'
-import { Plus, LogOut, User as UserIcon } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 const ITEMS_PER_PAGE = 5
 
 export default function HomePage() {
   const { searchCompanies, deleteCompany, companies, isLoading: isDataLoading } = useCompany()
-  const { user, isLoading: isAuthLoading, isAuthenticated, signOut } = useAuth()
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
@@ -61,7 +62,7 @@ export default function HomePage() {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Failed to delete company',
+          description: 'Failed to delete entity',
         })
       }
       setDeleteConfirm(null)
@@ -79,31 +80,26 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="mb-6 flex justify-end">
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <UserProfileMenu />
+          </div>
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-4xl font-bold text-foreground mb-2">
-              Companies
+              Entities
             </h1>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <UserIcon className="h-4 w-4" />
-              <span>Welcome, {user?.fullname}</span>
-            </div>
+            <p className="text-muted-foreground">Manage entity registrations</p>
           </div>
           <div className="flex gap-3 items-center">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={signOut}
-              title="Sign Out"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
             <Link href="/create">
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
                 <Plus className="h-5 w-5" />
-                New Company
+                New Entity
               </Button>
             </Link>
           </div>
@@ -114,7 +110,7 @@ export default function HomePage() {
           <SearchBar onSearch={handleSearchChange} />
         </div>
 
-        {/* Company List */}
+        {/* Entity List */}
         <div>
           {isDataLoading ? (
             <div className="flex justify-center py-12">
@@ -123,12 +119,12 @@ export default function HomePage() {
           ) : companies.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
-                {searchQuery ? `No companies match your search "${searchQuery}"` : "No companies yet. Create your first company to get started."}
+                {searchQuery ? `No entities match your search "${searchQuery}"` : "No entities yet. Create your first entity to get started."}
               </p>
               {!searchQuery && (
                 <Link href="/create">
                   <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    Create Company
+                    Create Entity
                   </Button>
                 </Link>
               )}

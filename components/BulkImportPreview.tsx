@@ -50,7 +50,7 @@ export function BulkImportPreview({
       toast({
         variant: 'destructive',
         title: 'Duplicates Found',
-        description: `${duplicates.length} company(ies) already exist and will be skipped`,
+        description: `${duplicates.length} entities already exist and will be skipped`,
       })
     }
 
@@ -64,15 +64,15 @@ export function BulkImportPreview({
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-1">
-            Preview ({companies.length} companies)
+            Preview ({companies.length} entities)
           </h3>
           <p className="text-sm text-muted-foreground">
             {duplicateCount > 0 ? (
               <>
-                Found {companies.length} companies ({duplicateCount} duplicates will be skipped)
+                Found {companies.length} entities ({duplicateCount} duplicates will be skipped)
               </>
             ) : (
-              'All companies are ready to import'
+              'All entities are ready to import'
             )}
           </p>
         </div>
@@ -113,7 +113,7 @@ export function BulkImportPreview({
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages} ({companies.length} total companies)
+              Page {currentPage} of {totalPages} ({companies.length} total entities)
             </div>
             <div className="flex gap-2">
               <Button
@@ -145,7 +145,7 @@ export function BulkImportPreview({
           disabled={isLoading || companies.length === 0}
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
         >
-          {isLoading ? 'Importing...' : `Import ${companies.length - duplicateCount} Companies`}
+          {isLoading ? 'Importing...' : `Import ${companies.length - duplicateCount} Entities`}
         </Button>
       </div>
     </Card>

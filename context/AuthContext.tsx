@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { SignInResponse, User } from '@/lib/types'
+import type { ChangePasswordData, User } from '@/lib/types'
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   signIn: (token: string) => Promise<void>
   signOut: () => void
+  changePassword: (data: ChangePasswordData) => Promise<void>
   isAuthenticated: boolean
 }
 
@@ -66,6 +67,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login')
   }
 
+  const changePassword = async (data: ChangePasswordData) => {
+    const token = localStorage.getItem('token')
+
+    if (!token) {
+      throw new Error('Please sign in again.')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/change_password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      const message =
+        typeof errorData?.message === 'string'
+          ? errorData.message
+          : 'Failed to change password.'
+
+      throw new Error(message)
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -73,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         signIn,
         signOut,
+        changePassword,
         isAuthenticated: !!user,
       }}
     >
