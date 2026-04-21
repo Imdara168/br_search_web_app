@@ -12,113 +12,274 @@ interface ExcelUploadProps {
   onDataLoaded: (companies: CompanyFormData[]) => void
 }
 
+type ColumnRole = 'english' | 'khmer' | 'entityCode'
+
+const MAX_SAMPLE_ROWS = 200
+const MAX_SAMPLE_VALUES = 50
+const MAX_IMPORT_ROWS = 100000
+
 export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Check if text contains Khmer characters
   const isKhmerText = (text: string): boolean => {
     if (!text) return false
-    // Khmer Unicode range: U+1780-U+17FF and U+19E0-U+19FF
-    const khmerRegex = /[\u1780-\u17FF\u19E0-\u19FF]/
-    return khmerRegex.test(text)
+    return /[\u1780-\u17FF\u19E0-\u19FF]/.test(text)
   }
 
-  // Detect if a column contains mostly Khmer or English text
-  const detectColumnType = (columnData: string[]): 'english' | 'khmer' | 'unknown' => {
-    // Sample up to 10 non-empty values
-    const samples = columnData.filter((val) => val && val.trim()).slice(0, 10)
-    
-    if (samples.length === 0) return 'unknown'
+  const normalizeCellValue = (value: unknown) => String(value ?? '').trim()
 
-    // Count Khmer vs non-Khmer texts
-    const khmerCount = samples.filter((text) => isKhmerText(text)).length
-    const englishCount = samples.length - khmerCount
+  const normalizeEntityCode = (value: string) => value.replace(/\s+/g, '').toUpperCase()
 
-    if (khmerCount > englishCount) return 'khmer'
-    if (englishCount > khmerCount) return 'english'
-    return 'unknown'
+  const isEntityCodeText = (text: string): boolean => {
+    if (!text) return false
+    return /^\d+(?:\/[A-Za-z0-9-]+)+$/i.test(normalizeEntityCode(text))
   }
 
-  const parseExcelFile = (file: File) => {
-    const reader = new FileReader()
-
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result
-        const workbook = XLSX.read(data, { type: 'binary' })
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-        const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, any>[]
-
-        if (jsonData.length === 0) {
-          toast({
-            variant: 'destructive',
-            title: 'No Data Found',
-            description: 'The Excel file appears to be empty',
-          })
-          return
-        }
-
-        // Get all column headers
-        const headers = Object.keys(jsonData[0])
-
-        // Analyze each column to determine if it's Khmer or English
-        const columnTypes: Record<string, 'english' | 'khmer' | 'unknown'> = {}
-
-        headers.forEach((header) => {
-          const columnData = jsonData.map((row) => String(row[header] || ''))
-          columnTypes[header] = detectColumnType(columnData)
-        })
-
-        // Find the English and Khmer columns
-        const englishColumn = headers.find((h) => columnTypes[h] === 'english')
-        const khmerColumn = headers.find((h) => columnTypes[h] === 'khmer')
-
-        if (!englishColumn || !khmerColumn) {
-          toast({
-            variant: 'destructive',
-            title: 'Unable to Detect Columns',
-            description:
-              'Could not automatically detect English and Khmer columns. Make sure your Excel has at least one column with English text and one with Khmer text.',
-          })
-          return
-        }
-
-        // Map the data using detected columns
-        const companies: CompanyFormData[] = jsonData
-          .map((row) => ({
-            englishName: String(row[englishColumn] || '').trim(),
-            khmerName: String(row[khmerColumn] || '').trim(),
-          }))
-          .filter((company) => company.englishName && company.khmerName)
-
-        if (companies.length === 0) {
-          toast({
-            variant: 'destructive',
-            title: 'No Valid Data',
-            description: 'No rows with both English and Khmer names found',
-          })
-          return
-        }
-
-        setFileName(file.name)
-        onDataLoaded(companies)
-        toast({
-          title: 'Success',
-          description: `Found ${companies.length} entities in the file`,
-        })
-      } catch (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to parse Excel file. Please check the format.',
-        })
-      }
+  const isEnglishLikeText = (text: string): boolean => {
+    if (!text || isKhmerText(text) || isEntityCodeText(text)) {
+      return false
     }
 
-    reader.readAsBinaryString(file)
+    return /[A-Za-z]/.test(text)
+  }
+
+  const detectHeaderRole = (text: string): ColumnRole | null => {
+    const normalized = text.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+    if (!normalized) {
+      return null
+    }
+
+    if (normalized.includes('english')) {
+      return 'english'
+    }
+
+    if (normalized.includes('khmer')) {
+      return 'khmer'
+    }
+
+    if (
+      normalized.includes('entitycode') ||
+      normalized.includes('entitiescode') ||
+      normalized.includes('registrationcode') ||
+      normalized === 'code'
+    ) {
+      return 'entityCode'
+    }
+
+    return null
+  }
+
+  const detectColumnIndices = (rows: string[][]) => {
+    const sampleRows = rows.slice(0, MAX_SAMPLE_ROWS)
+    const columnCount = sampleRows.reduce((max, row) => Math.max(max, row.length), 0)
+
+    if (columnCount === 0) {
+      return null
+    }
+
+    const headerRow = sampleRows[0] || []
+    const headerMatches = new Map<ColumnRole, number>()
+
+    headerRow.forEach((value, index) => {
+      const role = detectHeaderRole(value)
+      if (role && !headerMatches.has(role)) {
+        headerMatches.set(role, index)
+      }
+    })
+
+    const samplesByColumn = Array.from({ length: columnCount }, () => [] as string[])
+
+    sampleRows.forEach((row) => {
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+        const value = normalizeCellValue(row[columnIndex])
+        if (value && samplesByColumn[columnIndex].length < MAX_SAMPLE_VALUES) {
+          samplesByColumn[columnIndex].push(value)
+        }
+      }
+    })
+
+    const usedColumns = new Set<number>()
+    const resolved: Partial<Record<ColumnRole, number>> = {}
+
+    const scoreColumn = (role: ColumnRole, values: string[]) => {
+      const nonEmptyValues = values.filter(Boolean)
+      if (nonEmptyValues.length === 0) {
+        return -1
+      }
+
+      const matchingCount = nonEmptyValues.filter((value) => {
+        if (role === 'khmer') return isKhmerText(value)
+        if (role === 'entityCode') return isEntityCodeText(value)
+        return isEnglishLikeText(value)
+      }).length
+
+      const ratio = matchingCount / nonEmptyValues.length
+      return ratio * 1000 + matchingCount
+    }
+
+    ;(['english', 'khmer', 'entityCode'] as ColumnRole[]).forEach((role) => {
+      const headerIndex = headerMatches.get(role)
+      if (headerIndex !== undefined) {
+        resolved[role] = headerIndex
+        usedColumns.add(headerIndex)
+        return
+      }
+
+      let bestColumn = -1
+      let bestScore = -1
+
+      samplesByColumn.forEach((values, index) => {
+        if (usedColumns.has(index)) {
+          return
+        }
+
+        const score = scoreColumn(role, values)
+        if (score > bestScore) {
+          bestScore = score
+          bestColumn = index
+        }
+      })
+
+      if (bestColumn >= 0) {
+        resolved[role] = bestColumn
+        usedColumns.add(bestColumn)
+      }
+    })
+
+    if (
+      resolved.english === undefined ||
+      resolved.khmer === undefined ||
+      resolved.entityCode === undefined
+    ) {
+      return null
+    }
+
+    return {
+      english: resolved.english,
+      khmer: resolved.khmer,
+      entityCode: resolved.entityCode,
+      hasHeaderRow:
+        detectHeaderRole(headerRow[resolved.english] || '') === 'english' &&
+        detectHeaderRole(headerRow[resolved.khmer] || '') === 'khmer' &&
+        detectHeaderRole(headerRow[resolved.entityCode] || '') === 'entityCode',
+    }
+  }
+
+  const parseRows = (rows: string[][]): CompanyFormData[] => {
+    const detectedColumns = detectColumnIndices(rows)
+
+    if (!detectedColumns) {
+      return []
+    }
+
+    return rows
+      .map((row, rowIndex) => {
+        if (detectedColumns.hasHeaderRow && rowIndex === 0) {
+          return null
+        }
+
+        const values = row.map((value) => normalizeCellValue(value)).filter(Boolean)
+
+        if (values.length === 0) {
+          return null
+        }
+
+        let englishName = normalizeCellValue(row[detectedColumns.english])
+        let khmerName = normalizeCellValue(row[detectedColumns.khmer])
+        let entityCode = normalizeCellValue(row[detectedColumns.entityCode])
+
+        if (!englishName) {
+          englishName = values.find((value) => isEnglishLikeText(value)) || ''
+        }
+
+        if (!khmerName) {
+          khmerName = values.find((value) => isKhmerText(value)) || ''
+        }
+
+        if (!entityCode) {
+          entityCode = values.find((value) => isEntityCodeText(value)) || ''
+        }
+
+        const normalizedEntityCode = normalizeEntityCode(entityCode)
+        const isHeaderRow =
+          detectHeaderRole(englishName) === 'english' &&
+          detectHeaderRole(khmerName) === 'khmer' &&
+          detectHeaderRole(normalizedEntityCode) === 'entityCode'
+
+        if (isHeaderRow || !englishName || !khmerName || !normalizedEntityCode) {
+          return null
+        }
+
+        return {
+          englishName,
+          khmerName,
+          entityCode: normalizedEntityCode,
+        }
+      })
+      .filter((company): company is CompanyFormData => company !== null)
+  }
+
+  const parseExcelFile = async (file: File) => {
+    try {
+      const buffer = await file.arrayBuffer()
+      const workbook = XLSX.read(buffer, { type: 'array' })
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+      const rawRows = XLSX.utils.sheet_to_json<(string | number)[]>(worksheet, {
+        header: 1,
+        raw: false,
+        defval: '',
+        blankrows: false,
+      })
+
+      const rows = rawRows.map((row) => row.map((cell) => normalizeCellValue(cell)))
+
+      if (rows.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'No Data Found',
+          description: 'The Excel file appears to be empty.',
+        })
+        return
+      }
+
+      const companies = parseRows(rows)
+
+      if (companies.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Unable to Detect Columns',
+          description:
+            'Could not detect English Name, Khmer Name, and Entities Code columns. Make sure the sheet has those 3 values in each row.',
+        })
+        return
+      }
+
+      if (companies.length > MAX_IMPORT_ROWS) {
+        toast({
+          variant: 'destructive',
+          title: 'Import Limit Exceeded',
+          description: `You can import up to ${MAX_IMPORT_ROWS} rows at a time.`,
+        })
+        return
+      }
+
+      setFileName(file.name)
+      onDataLoaded(companies)
+      toast({
+        title: 'Success',
+        description: `Found ${companies.length} entities in the file`,
+      })
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to parse Excel file. Please check the format.',
+      })
+    }
   }
 
   const handleFileSelect = (file: File) => {
@@ -131,7 +292,7 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
       return
     }
 
-    parseExcelFile(file)
+    void parseExcelFile(file)
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -180,7 +341,13 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
             Import from Excel
           </h3>
           <p className="text-sm text-muted-foreground">
-            Upload an Excel file with English and Khmer entity names. The system will automatically detect which column contains which language.
+            Upload an Excel or CSV file with 3 columns for English Name, Khmer Name, and Entities Code. The system will detect the columns automatically and preview them before import.
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            For more than 65,536 rows, use `.xlsx` or `.csv`. Old `.xls` files cannot store 100,000+ rows.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Maximum import size: 100,000 rows per file.
           </p>
         </div>
 

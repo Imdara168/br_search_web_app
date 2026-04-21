@@ -1,17 +1,24 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { ApiMessageResponse, Company, CompanyFormData, Registration } from '@/lib/types'
+import {
+  ApiMessageResponse,
+  Company,
+  CompanyFormData,
+  PaginatedRegistrationsResponse,
+} from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
 
 interface CompanyContextType {
   companies: Company[]
+  totalCompanies: number
   isLoading: boolean
   addCompany: (data: CompanyFormData) => void
   bulkAddCompanies: (data: CompanyFormData[]) => void
+  fetchCompanies: (params?: { query?: string; page?: number; limit?: number }) => Promise<void>
+  refreshCompanies: () => Promise<void>
   updateCompany: (id: string, data: CompanyFormData) => Promise<ApiMessageResponse>
   deleteCompany: (id: string) => Promise<ApiMessageResponse>
-  searchCompanies: (query: string) => void
   getCompanyById: (id: string) => Company | undefined
 }
 
@@ -22,10 +29,21 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
+  const [totalCompanies, setTotalCompanies] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
+  const [lastQuery, setLastQuery] = useState('')
+  const [lastPage, setLastPage] = useState(1)
+  const [lastLimit, setLastLimit] = useState(10)
 
-  const fetchRegistrations = useCallback(async (query: string = '') => {
+  const fetchCompanies = useCallback(async (
+    params: { query?: string; page?: number; limit?: number; sortOrder?: 'asc' | 'desc' } = {},
+  ) => {
     if (!isAuthenticated) return
+
+    const query = params.query ?? lastQuery
+    const page = params.page ?? lastPage
+    const limit = params.limit ?? lastLimit
+    const sort = params.sortOrder ?? 'asc' // Default to asc if not provided
 
     setIsLoading(true)
     try {
@@ -34,6 +52,9 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       if (query) {
         url.searchParams.append('query', query)
       }
+      url.searchParams.append('page', String(page))
+      url.searchParams.append('limit', String(limit))
+      url.searchParams.append('sort', sort)
 
       const response = await fetch(url.toString(), {
         headers: {
@@ -42,30 +63,34 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (response.ok) {
-        const data: Registration[] = await response.json()
-        const mappedCompanies: Company[] = data.map((reg) => ({
+        const result: PaginatedRegistrationsResponse = await response.json()
+        const mappedCompanies: Company[] = result.data.map((reg) => ({
           id: reg.slug, 
           englishName: reg.name_en,
           khmerName: reg.name_kh || '',
+          entityCode: reg.entity_code || '',
           slug: reg.slug,
-          createdAt: new Date().toISOString(),
+          createdAt: reg.created_at || new Date().toISOString(),
         }))
+        setLastQuery(query)
+        setLastPage(page)
+        setLastLimit(limit)
         setCompanies(mappedCompanies)
+        setTotalCompanies(result.total)
       }
     } catch (error) {
       console.error('Failed to search registrations', error)
     } finally {
       setIsLoading(false)
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, lastLimit, lastPage, lastQuery])
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchRegistrations('')
-    } else {
+    if (!isAuthenticated) {
       setCompanies([])
+      setTotalCompanies(0)
     }
-  }, [isAuthenticated, fetchRegistrations])
+  }, [isAuthenticated])
 
   const addCompany = useCallback((data: CompanyFormData) => {
     const id = Date.now().toString()
@@ -103,21 +128,21 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({
           name_en: data.englishName,
-          name_kh: data.khmerName
+          name_kh: data.khmerName,
+          entity_code: data.entityCode,
         }),
       })
 
       if (!response.ok) throw new Error('Failed to update registration')
       
       const result = await response.json()
-      // Refresh the list
-      fetchRegistrations('')
+      fetchCompanies()
       return result
     } catch (error) {
       console.error('Update failed', error)
       throw error
     }
-  }, [fetchRegistrations])
+  }, [fetchCompanies])
 
   const deleteCompany = useCallback(async (slug: string) => {
     try {
@@ -132,33 +157,34 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) throw new Error('Failed to delete registration')
       
       const result = await response.json()
-      // Refresh the list
-      fetchRegistrations('')
+      fetchCompanies()
       return result
     } catch (error) {
       console.error('Delete failed', error)
       throw error
     }
-  }, [fetchRegistrations])
-
-  const searchCompanies = useCallback((query: string) => {
-    fetchRegistrations(query)
-  }, [fetchRegistrations])
+  }, [fetchCompanies])
 
   const getCompanyById = useCallback((id: string): Company | undefined => {
     return companies.find((company) => company.id === id)
   }, [companies])
 
+  const refreshCompanies = useCallback(async () => {
+    await fetchCompanies()
+  }, [fetchCompanies])
+
   return (
     <CompanyContext.Provider
       value={{
         companies,
+        totalCompanies,
         isLoading,
         addCompany,
         bulkAddCompanies,
+        fetchCompanies,
+        refreshCompanies,
         updateCompany,
         deleteCompany,
-        searchCompanies,
         getCompanyById,
       }}
     >

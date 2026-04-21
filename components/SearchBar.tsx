@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, ChangeEvent } from 'react'
+import { useState, ChangeEvent, KeyboardEvent } from 'react'
 import { Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,9 +14,17 @@ export function SearchBar({ onSearch, placeholder = 'Search entities...' }: Sear
   const [value, setValue] = useState('')
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value
-    setValue(newValue)
-    onSearch(newValue)
+    setValue(e.target.value)
+  }
+
+  const handleSearch = () => {
+    onSearch(value)
+  }
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
   }
 
   const handleClear = () => {
@@ -25,15 +33,16 @@ export function SearchBar({ onSearch, placeholder = 'Search entities...' }: Sear
   }
 
   return (
-    <div className="relative w-full">
-      <div className="relative">
+    <div className="flex w-full gap-2">
+      <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <Input
           type="text"
           placeholder={placeholder}
           value={value}
           onChange={handleChange}
-          className="pl-10 pr-10 bg-card border-border"
+          onKeyDown={handleKeyDown}
+          className="pl-10 pr-10 bg-card border-border w-full"
         />
         {value && (
           <Button
@@ -46,6 +55,10 @@ export function SearchBar({ onSearch, placeholder = 'Search entities...' }: Sear
           </Button>
         )}
       </div>
+      <Button onClick={handleSearch} className="flex gap-2">
+        <Search className="h-4 w-4" />
+        Search
+      </Button>
     </div>
   )
 }

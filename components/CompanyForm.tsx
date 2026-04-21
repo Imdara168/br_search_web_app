@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -17,6 +16,9 @@ const companySchema = z.object({
   khmerName: z.string()
     .min(1, 'Khmer name is required')
     .min(2, 'Khmer name must be at least 2 characters'),
+  entityCode: z.string()
+    .min(1, 'Entities code is required')
+    .regex(/^\d+(?:\/[A-Za-z0-9-]+)+$/i, 'Entities code must look like 000/04/P'),
 })
 
 interface CompanyFormProps {
@@ -39,24 +41,20 @@ export function CompanyForm({
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<CompanyFormData>({
     resolver: zodResolver(companySchema),
     defaultValues: initialData || {
       englishName: '',
       khmerName: '',
+      entityCode: '',
     },
   })
 
-  const englishName = watch('englishName')
-
   const handleFormSubmit = (data: CompanyFormData) => {
-    // Check for duplicates (case-insensitive, ignore spaces/commas/dots)
     const normalizedInput = data.englishName.toLowerCase().replace(/[\s,.]/g, '')
     const normalizedCurrent = initialData?.englishName.toLowerCase().replace(/[\s,.]/g, '') || ''
 
     if (normalizedInput === normalizedCurrent) {
-      // Same entity, allow update
       onSubmit(data)
       return
     }
@@ -99,13 +97,30 @@ export function CompanyForm({
           </label>
           <Input
             {...register('khmerName')}
-            placeholder="វាយបញ្ចូលឈ្មោះអង្គភាព"
+            placeholder="Enter entity name in Khmer"
             className="bg-secondary border-border text-foreground placeholder-muted-foreground"
             disabled={isLoading}
           />
           {errors.khmerName && (
             <p className="text-destructive text-sm mt-1">
               {errors.khmerName.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Entities Code
+          </label>
+          <Input
+            {...register('entityCode')}
+            placeholder="000/04/P"
+            className="bg-secondary border-border text-foreground placeholder-muted-foreground font-mono"
+            disabled={isLoading}
+          />
+          {errors.entityCode && (
+            <p className="text-destructive text-sm mt-1">
+              {errors.entityCode.message}
             </p>
           )}
         </div>

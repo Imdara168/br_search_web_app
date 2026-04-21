@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CompanyFormData } from '@/lib/types'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,10 @@ export function BulkImportPreview({
 }: BulkImportPreviewProps) {
   const { toast } = useToast()
   const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [companies])
 
   const totalPages = Math.ceil(companies.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -90,6 +94,9 @@ export function BulkImportPreview({
                 <th className="text-left py-3 px-4 font-semibold text-foreground">
                   Khmer Name
                 </th>
+                <th className="text-left py-3 px-4 font-semibold text-foreground">
+                  Entities Code
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -103,6 +110,7 @@ export function BulkImportPreview({
                   </td>
                   <td className="py-3 px-4 text-foreground">{company.englishName}</td>
                   <td className="py-3 px-4 text-foreground">{company.khmerName}</td>
+                  <td className="py-3 px-4 text-foreground font-mono">{company.entityCode}</td>
                 </tr>
               ))}
             </tbody>
@@ -116,6 +124,14 @@ export function BulkImportPreview({
               Page {currentPage} of {totalPages} ({companies.length} total entities)
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                First Page
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -135,6 +151,14 @@ export function BulkImportPreview({
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                Last Page
               </Button>
             </div>
           </div>

@@ -125,7 +125,8 @@ export default function EditPage() {
           <CompanyForm
             initialData={{
               englishName: company.englishName,
-              khmerName: company.khmerName
+              khmerName: company.khmerName,
+              entityCode: company.entityCode,
             }}
             onSubmit={handleSubmit}
             isLoading={isLoading}

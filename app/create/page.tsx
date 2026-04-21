@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function CreatePage() {
   const router = useRouter()
-  const { addCompany, bulkAddCompanies, companies } = useCompany()
+  const { addCompany, companies, refreshCompanies } = useCompany()
   const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -47,7 +47,8 @@ export default function CreatePage() {
         },
         body: JSON.stringify({
           name_en: data.englishName,
-          name_kh: data.khmerName
+          name_kh: data.khmerName,
+          entity_code: data.entityCode,
         }),
       })
 
@@ -91,7 +92,8 @@ export default function CreatePage() {
         body: JSON.stringify({
           data: data.map(item => ({
             name_en: item.englishName,
-            name_kh: item.khmerName
+            name_kh: item.khmerName,
+            entity_code: item.entityCode,
           }))
         }),
       })
@@ -102,11 +104,11 @@ export default function CreatePage() {
 
       const result = await response.json()
       
-      bulkAddCompanies(data)
+      await refreshCompanies()
       setExcelData([])
       toast({
         title: 'Success',
-        description: result.message || 'Import successfully!',
+        description: result.message || 'Import Successfully!',
       })
       router.push('/')
     } catch (error: any) {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, LogOut, LockKeyhole, User as UserIcon } from 'lucide-react'
+import { Eye, EyeOff, Loader2, LogOut, LockKeyhole, User as UserIcon } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 import { useAuth } from '@/context/AuthContext'
@@ -84,6 +84,9 @@ export function UserProfileMenu() {
   const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showOldPassword, setShowOldPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const form = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
@@ -174,51 +177,95 @@ export function UserProfileMenu() {
                   <FormItem>
                     <FormLabel>Current password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        autoComplete="current-password"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showOldPassword ? 'text' : 'password'}
+                          autoComplete="current-password"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                        >
+                          {showOldPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="new_password"
-                render={({ field }) => (
+                  )}
+                  />
+                  <FormField
+                  control={form.control}
+                  name="new_password"
+                  render={({ field }) => (
                   <FormItem>
                     <FormLabel>New password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        autoComplete="new-password"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showNewPassword ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirm_password"
-                render={({ field }) => (
+                  )}
+                  />
+                  <FormField
+                  control={form.control}
+                  name="confirm_password"
+                  render={({ field }) => (
                   <FormItem>
                     <FormLabel>Confirm new password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        autoComplete="new-password"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-              <DialogFooter>
+                  )}
+                  />              <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"

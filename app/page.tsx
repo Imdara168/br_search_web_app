@@ -14,16 +14,19 @@ import { UserProfileMenu } from '@/components/UserProfileMenu'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-const ITEMS_PER_PAGE = 5
+const DEFAULT_ITEMS_PER_PAGE = 5
 
 export default function HomePage() {
-  const { searchCompanies, deleteCompany, companies, isLoading: isDataLoading } = useCompany()
+  const { fetchCompanies, deleteCompany, companies, totalCompanies, isLoading: isDataLoading } = useCompany()
   const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE)
   const [deleteConfirm, setDeleteConfirm] = useState<{
     id: string
     name: string
@@ -35,15 +38,28 @@ export default function HomePage() {
     }
   }, [isAuthLoading, isAuthenticated, router])
 
-  const paginatedCompanies = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    return companies.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-  }, [companies, currentPage])
+  const totalPages = Math.max(1, Math.ceil(totalCompanies / itemsPerPage))
+  const startNumber = (currentPage - 1) * itemsPerPage + 1
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    fetchCompanies({
+      query: searchQuery,
+      page: currentPage,
+      limit: itemsPerPage,
+      sortOrder,
+    })
+  }, [currentPage, itemsPerPage, searchQuery, sortOrder, isAuthenticated, fetchCompanies])
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
-    setCurrentPage(1) // Reset to first page on search
-    searchCompanies(query)
+    setCurrentPage(1)
   }
 
   const handleDeleteClick = (id: string, name: string) => {
@@ -105,9 +121,21 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6">
+        {/* Search Bar & Sort */}
+        <div className="mb-6 flex gap-2">
           <SearchBar onSearch={handleSearchChange} />
+          <Select value={sortOrder} onValueChange={(val: 'asc' | 'desc') => {
+            setSortOrder(val)
+            setCurrentPage(1)
+          }}>
+            <SelectTrigger className="w-[120px] bg-card border-border">
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">A - Z</SelectItem>
+              <SelectItem value="desc">Z - A</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Entity List */}
@@ -116,7 +144,7 @@ export default function HomePage() {
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : companies.length === 0 ? (
+          ) : totalCompanies === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
                 {searchQuery ? `No entities match your search "${searchQuery}"` : "No entities yet. Create your first entity to get started."}
@@ -132,7 +160,8 @@ export default function HomePage() {
           ) : (
             <>
               <CompanyList
-                companies={paginatedCompanies}
+                companies={companies}
+                startNumber={startNumber}
                 onDelete={(id) => {
                   const company = companies.find((c) => c.id === id)
                   if (company) {
@@ -142,9 +171,13 @@ export default function HomePage() {
               />
               <Pagination
                 currentPage={currentPage}
-                totalItems={companies.length}
-                itemsPerPage={ITEMS_PER_PAGE}
+                totalItems={totalCompanies}
+                itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
+                onItemsPerPageChange={(value) => {
+                  setItemsPerPage(value)
+                  setCurrentPage(1)
+                }}
               />
             </>
           )}
