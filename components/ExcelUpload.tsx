@@ -4,12 +4,17 @@ import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Upload, X } from 'lucide-react'
+import { FileSpreadsheet, Rows3, ScanSearch, Upload, X } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { CompanyFormData } from '@/lib/types'
+import { looksLikeEntityCode, normalizeEntityCode } from '@/lib/entity-code'
+import { cn } from '@/lib/utils'
 
 interface ExcelUploadProps {
   onDataLoaded: (companies: CompanyFormData[]) => void
+  onPreviewRequested?: () => void
+  previewCount?: number
+  className?: string
 }
 
 type ColumnRole = 'english' | 'khmer' | 'entityCode'
@@ -18,7 +23,12 @@ const MAX_SAMPLE_ROWS = 200
 const MAX_SAMPLE_VALUES = 50
 const MAX_IMPORT_ROWS = 100000
 
-export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
+export function ExcelUpload({
+  onDataLoaded,
+  onPreviewRequested,
+  previewCount = 0,
+  className,
+}: ExcelUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -31,15 +41,8 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
 
   const normalizeCellValue = (value: unknown) => String(value ?? '').trim()
 
-  const normalizeEntityCode = (value: string) => value.replace(/\s+/g, '').toUpperCase()
-
-  const isEntityCodeText = (text: string): boolean => {
-    if (!text) return false
-    return /^\d+(?:\/[A-Za-z0-9-]+)+$/i.test(normalizeEntityCode(text))
-  }
-
   const isEnglishLikeText = (text: string): boolean => {
-    if (!text || isKhmerText(text) || isEntityCodeText(text)) {
+    if (!text || isKhmerText(text) || looksLikeEntityCode(text)) {
       return false
     }
 
@@ -113,7 +116,7 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
 
       const matchingCount = nonEmptyValues.filter((value) => {
         if (role === 'khmer') return isKhmerText(value)
-        if (role === 'entityCode') return isEntityCodeText(value)
+        if (role === 'entityCode') return looksLikeEntityCode(value)
         return isEnglishLikeText(value)
       }).length
 
@@ -201,7 +204,7 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
         }
 
         if (!entityCode) {
-          entityCode = values.find((value) => isEntityCodeText(value)) || ''
+          entityCode = values.find((value) => looksLikeEntityCode(value)) || ''
         }
 
         const normalizedEntityCode = normalizeEntityCode(entityCode)
@@ -269,6 +272,7 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
 
       setFileName(file.name)
       onDataLoaded(companies)
+      onPreviewRequested?.()
       toast({
         title: 'Success',
         description: `Found ${companies.length} entities in the file`,
@@ -334,75 +338,134 @@ export function ExcelUpload({ onDataLoaded }: ExcelUploadProps) {
   }
 
   return (
-    <Card className="bg-card border-border p-6 mb-6">
-      <div className="space-y-4">
+    <Card className={cn('bg-card border-border p-6 w-full', className)}>
+      <div className="flex h-full flex-col gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Import from Excel
+          <h3 className="text-lg font-semibold text-foreground mb-1">
+            Bulk Import
           </h3>
           <p className="text-sm text-muted-foreground">
-            Upload an Excel or CSV file with 3 columns for English Name, Khmer Name, and Entities Code. The system will detect the columns automatically and preview them before import.
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            For more than 65,536 rows, use `.xlsx` or `.csv`. Old `.xls` files cannot store 100,000+ rows.
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Maximum import size: 100,000 rows per file.
+            Upload a file and preview it before importing.
           </p>
         </div>
 
         {!fileName ? (
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragging
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleInputChange}
-              className="hidden"
-            />
+          <>
             <div
-              onClick={() => fileInputRef.current?.click()}
-              className="flex flex-col items-center gap-3"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                isDragging
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border bg-secondary/20 hover:border-primary/50 hover:bg-secondary/30'
+              }`}
             >
-              <Upload className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <p className="text-foreground font-medium">
-                  Drop your Excel file here or click to browse
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleInputChange}
+                className="hidden"
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center gap-3"
+              >
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <div>
+                  <p className="text-foreground font-medium">
+                    Drop a file here or click to browse
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    `.xlsx`, `.xls`, `.csv`
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-border/70 bg-secondary/25 p-3">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                  <FileSpreadsheet className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Flexible Files</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Import `.xlsx`, `.xls`, or `.csv` in one step.
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Supports .xlsx, .xls, and .csv files
+              </div>
+
+              <div className="rounded-lg border border-border/70 bg-secondary/25 p-3">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                  <ScanSearch className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Smart Detection</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Columns are detected automatically before import.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border/70 bg-secondary/25 p-3">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-md bg-primary/10">
+                  <Rows3 className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-foreground">Large Uploads</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Preview and validate up to 100,000 rows.
                 </p>
               </div>
             </div>
-          </div>
+          </>
         ) : (
-          <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-primary/20 rounded-lg flex items-center justify-center">
-                <Upload className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">{fileName}</p>
-                <p className="text-xs text-muted-foreground">File loaded successfully</p>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border bg-secondary/40 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <Upload className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{fileName}</p>
+                    {previewCount > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {previewCount} entities ready
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onPreviewRequested?.()}
+                  >
+                    Preview
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClear}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClear}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+
+            <div className="flex flex-wrap gap-2">
+              <div className="rounded-full border border-border/70 bg-secondary/25 px-3 py-1 text-xs text-muted-foreground">
+                Auto-detect columns
+              </div>
+              <div className="rounded-full border border-border/70 bg-secondary/25 px-3 py-1 text-xs text-muted-foreground">
+                Preview before import
+              </div>
+              <div className="rounded-full border border-border/70 bg-secondary/25 px-3 py-1 text-xs text-muted-foreground">
+                Up to 100,000 rows
+              </div>
+            </div>
           </div>
         )}
       </div>

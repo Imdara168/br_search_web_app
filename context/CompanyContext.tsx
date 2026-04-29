@@ -36,14 +36,13 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const [lastLimit, setLastLimit] = useState(10)
 
   const fetchCompanies = useCallback(async (
-    params: { query?: string; page?: number; limit?: number; sortOrder?: 'asc' | 'desc' } = {},
+    params: { query?: string; page?: number; limit?: number } = {},
   ) => {
     if (!isAuthenticated) return
 
     const query = params.query ?? lastQuery
     const page = params.page ?? lastPage
     const limit = params.limit ?? lastLimit
-    const sort = params.sortOrder ?? 'asc' // Default to asc if not provided
 
     setIsLoading(true)
     try {
@@ -54,7 +53,6 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       }
       url.searchParams.append('page', String(page))
       url.searchParams.append('limit', String(limit))
-      url.searchParams.append('sort', sort)
 
       const response = await fetch(url.toString(), {
         headers: {

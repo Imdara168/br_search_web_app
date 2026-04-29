@@ -2,10 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { CompanyFormData } from '@/lib/types'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const ITEMS_PER_PAGE = 50
 
@@ -14,6 +20,9 @@ interface BulkImportPreviewProps {
   onImport: (companies: CompanyFormData[]) => void
   isLoading?: boolean
   isDuplicate?: (englishName: string) => boolean
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  fileName?: string | null
 }
 
 export function BulkImportPreview({
@@ -21,6 +30,9 @@ export function BulkImportPreview({
   onImport,
   isLoading = false,
   isDuplicate = () => false,
+  isOpen,
+  onOpenChange,
+  fileName,
 }: BulkImportPreviewProps) {
   const { toast } = useToast()
   const [currentPage, setCurrentPage] = useState(1)
@@ -64,114 +76,127 @@ export function BulkImportPreview({
   }
 
   return (
-    <Card className="bg-card border-border p-6">
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground mb-1">
-            Preview ({companies.length} entities)
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {duplicateCount > 0 ? (
-              <>
-                Found {companies.length} entities ({duplicateCount} duplicates will be skipped)
-              </>
-            ) : (
-              'All entities are ready to import'
-            )}
-          </p>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="border-border bg-card p-0 sm:max-w-5xl">
+        <div className="space-y-4 p-6">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-lg text-foreground">
+              Preview ({companies.length} entities)
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {duplicateCount > 0 ? (
+                <>
+                  {fileName ? `${fileName} contains ` : 'Found '}
+                  {companies.length} entities ({duplicateCount} duplicates will be skipped)
+                </>
+              ) : (
+                <>
+                  {fileName ? `${fileName} is ready to import.` : 'All entities are ready to import.'}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 font-semibold text-foreground">
-                  #
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-foreground">
-                  English Name
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-foreground">
-                  Khmer Name
-                </th>
-                <th className="text-left py-3 px-4 font-semibold text-foreground">
-                  Entities Code
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedCompanies.map((company, index) => (
-                <tr
-                  key={startIndex + index}
-                  className="border-b border-border/50 hover:bg-secondary/30 transition-colors"
-                >
-                  <td className="py-3 px-4 text-muted-foreground">
-                    {startIndex + index + 1}
-                  </td>
-                  <td className="py-3 px-4 text-foreground">{company.englishName}</td>
-                  <td className="py-3 px-4 text-foreground">{company.khmerName}</td>
-                  <td className="py-3 px-4 text-foreground font-mono">{company.entityCode}</td>
+          <div className="max-h-[55vh] overflow-auto rounded-lg border border-border bg-background">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-card">
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">
+                    #
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">
+                    English Name
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">
+                    Khmer Name
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-foreground">
+                    Entities Code
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages} ({companies.length} total entities)
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-              >
-                First Page
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="gap-2"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-              >
-                Last Page
-              </Button>
-            </div>
+              </thead>
+              <tbody>
+                {paginatedCompanies.map((company, index) => (
+                  <tr
+                    key={startIndex + index}
+                    className="border-b border-border/50 transition-colors hover:bg-secondary/30"
+                  >
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {startIndex + index + 1}
+                    </td>
+                    <td className="py-3 px-4 text-foreground">{company.englishName}</td>
+                    <td className="py-3 px-4 text-foreground">{company.khmerName}</td>
+                    <td className="py-3 px-4 font-mono text-foreground">{company.entityCode}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
 
-        <Button
-          onClick={handleImport}
-          disabled={isLoading || companies.length === 0}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
-          {isLoading ? 'Importing...' : `Import ${companies.length - duplicateCount} Entities`}
-        </Button>
-      </div>
-    </Card>
+          {totalPages > 1 && (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages} ({companies.length} total entities)
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  First Page
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="gap-2"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Last Page
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={isLoading || companies.length === 0}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isLoading ? 'Importing...' : `Import ${companies.length - duplicateCount} Entities`}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

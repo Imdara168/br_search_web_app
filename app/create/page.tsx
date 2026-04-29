@@ -20,12 +20,19 @@ export default function CreatePage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [excelData, setExcelData] = useState<CompanyFormData[]>([])
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       router.push('/login')
     }
   }, [isAuthLoading, isAuthenticated, router])
+
+  useEffect(() => {
+    if (excelData.length === 0) {
+      setIsPreviewOpen(false)
+    }
+  }, [excelData])
 
   const isDuplicate = (englishName: string) => {
     const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, '')
@@ -132,7 +139,7 @@ export default function CreatePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Back Button */}
         <Link href="/">
           <Button
@@ -146,7 +153,7 @@ export default function CreatePage() {
 
         {/* Form Section */}
         <div className="space-y-6">
-          <div>
+          <div className="mx-auto w-full max-w-4xl">
             <h1 className="text-3xl font-bold text-foreground mb-2">
               Create New Entity
             </h1>
@@ -155,38 +162,46 @@ export default function CreatePage() {
             </p>
           </div>
 
-          {/* Excel Upload Section */}
-          <ExcelUpload onDataLoaded={setExcelData} />
+          <div className="mx-auto grid w-full max-w-4xl gap-6 md:grid-cols-2 md:items-stretch">
+            <div className="w-full">
+              <CompanyForm
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
+                submitButtonLabel="Create Entity"
+                isDuplicate={isDuplicate}
+                title="Create Manually"
+                description="Fill in the fields below to add one entity at a time."
+                className="h-full max-w-none"
+              />
+            </div>
 
-          {/* Bulk Import Preview */}
-          {excelData.length > 0 && (
-            <BulkImportPreview
-              companies={excelData}
-              onImport={handleBulkImport}
-              isLoading={isLoading}
-              isDuplicate={(englishName) => {
-                const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, '')
-                return companies.some((company) => {
-                  const normalizedExisting = company.englishName.toLowerCase().replace(/[\s,.]/g, '')
-                  return normalizedExisting === normalizedInput
-                })
-              }}
-            />
-          )}
-
-          {/* Manual Entry Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-foreground mb-4">
-              Or create manually
-            </h3>
-            <CompanyForm
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-              submitButtonLabel="Create Entity"
-              isDuplicate={isDuplicate}
-            />
+            <div className="w-full">
+              <ExcelUpload
+                onDataLoaded={setExcelData}
+                onPreviewRequested={() => setIsPreviewOpen(true)}
+                previewCount={excelData.length}
+                className="h-full max-w-none"
+              />
+            </div>
           </div>
         </div>
+
+        {excelData.length > 0 && (
+          <BulkImportPreview
+            companies={excelData}
+            onImport={handleBulkImport}
+            isLoading={isLoading}
+            isOpen={isPreviewOpen}
+            onOpenChange={setIsPreviewOpen}
+            isDuplicate={(englishName) => {
+              const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, '')
+              return companies.some((company) => {
+                const normalizedExisting = company.englishName.toLowerCase().replace(/[\s,.]/g, '')
+                return normalizedExisting === normalizedInput
+              })
+            }}
+          />
+        )}
       </div>
     </main>
   )

@@ -1,42 +1,50 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { CompanyFormData } from '@/lib/types'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import { useToast } from '@/hooks/use-toast'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { CompanyFormData } from "@/lib/types";
+import { normalizeEntityCode } from "@/lib/entity-code";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const companySchema = z.object({
-  englishName: z.string()
-    .min(1, 'English name is required')
-    .min(2, 'English name must be at least 2 characters'),
-  khmerName: z.string()
-    .min(1, 'Khmer name is required')
-    .min(2, 'Khmer name must be at least 2 characters'),
-  entityCode: z.string()
-    .min(1, 'Entities code is required')
-    .regex(/^\d+(?:\/[A-Za-z0-9-]+)+$/i, 'Entities code must look like 000/04/P'),
-})
+  englishName: z
+    .string()
+    .min(1, "English name is required")
+    .min(2, "English name must be at least 2 characters"),
+  khmerName: z
+    .string()
+    .min(1, "Khmer name is required")
+    .min(2, "Khmer name must be at least 2 characters"),
+  entityCode: z.string().trim().min(1, "Entities code is required"),
+});
 
 interface CompanyFormProps {
-  initialData?: CompanyFormData
-  onSubmit: (data: CompanyFormData) => void
-  isLoading?: boolean
-  submitButtonLabel?: string
-  isDuplicate?: (englishName: string, currentName?: string) => boolean
+  initialData?: CompanyFormData;
+  onSubmit: (data: CompanyFormData) => void;
+  isLoading?: boolean;
+  submitButtonLabel?: string;
+  isDuplicate?: (englishName: string, currentName?: string) => boolean;
+  title?: string;
+  description?: string;
+  className?: string;
 }
 
 export function CompanyForm({
   initialData,
   onSubmit,
   isLoading = false,
-  submitButtonLabel = 'Create Entity',
+  submitButtonLabel = "Create Entity",
   isDuplicate = () => false,
+  title,
+  description,
+  className,
 }: CompanyFormProps) {
-  const { toast } = useToast()
+  const { toast } = useToast();
   const {
     register,
     handleSubmit,
@@ -44,42 +52,60 @@ export function CompanyForm({
   } = useForm<CompanyFormData>({
     resolver: zodResolver(companySchema),
     defaultValues: initialData || {
-      englishName: '',
-      khmerName: '',
-      entityCode: '',
+      englishName: "",
+      khmerName: "",
+      entityCode: "",
     },
-  })
+  });
 
   const handleFormSubmit = (data: CompanyFormData) => {
-    const normalizedInput = data.englishName.toLowerCase().replace(/[\s,.]/g, '')
-    const normalizedCurrent = initialData?.englishName.toLowerCase().replace(/[\s,.]/g, '') || ''
+    const normalizedData = {
+      ...data,
+      entityCode: normalizeEntityCode(data.entityCode),
+    };
+    const normalizedInput = data.englishName
+      .toLowerCase()
+      .replace(/[\s,.]/g, "");
+    const normalizedCurrent =
+      initialData?.englishName.toLowerCase().replace(/[\s,.]/g, "") || "";
 
     if (normalizedInput === normalizedCurrent) {
-      onSubmit(data)
-      return
+      onSubmit(normalizedData);
+      return;
     }
 
     if (isDuplicate(data.englishName, initialData?.englishName)) {
       toast({
-        variant: 'destructive',
-        title: 'Duplicate Entity',
-        description: 'An entity with this name already exists',
-      })
-      return
+        variant: "destructive",
+        title: "Duplicate Entity",
+        description: "An entity with this name already exists",
+      });
+      return;
     }
 
-    onSubmit(data)
-  }
+    onSubmit(normalizedData);
+  };
 
   return (
-    <Card className="bg-card border-border p-6 max-w-md">
+    <Card className={cn("bg-card border-border p-6 w-full", className)}>
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+        {(title || description) && (
+          <div className="space-y-1">
+            {title && (
+              <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+            )}
+            {description && (
+              <p className="text-sm text-muted-foreground">{description}</p>
+            )}
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
             English Name
           </label>
           <Input
-            {...register('englishName')}
+            {...register("englishName")}
             placeholder="Enter entity name in English"
             className="bg-secondary border-border text-foreground placeholder-muted-foreground"
             disabled={isLoading}
@@ -96,7 +122,7 @@ export function CompanyForm({
             Khmer Name
           </label>
           <Input
-            {...register('khmerName')}
+            {...register("khmerName")}
             placeholder="Enter entity name in Khmer"
             className="bg-secondary border-border text-foreground placeholder-muted-foreground"
             disabled={isLoading}
@@ -113,9 +139,9 @@ export function CompanyForm({
             Entities Code
           </label>
           <Input
-            {...register('entityCode')}
-            placeholder="000/04/P"
-            className="bg-secondary border-border text-foreground placeholder-muted-foreground font-mono"
+            {...register("entityCode")}
+            placeholder="Enter Entities Code"
+            className="bg-secondary border-border text-foreground placeholder-muted-foreground"
             disabled={isLoading}
           />
           {errors.entityCode && (
@@ -131,10 +157,10 @@ export function CompanyForm({
             disabled={isLoading}
             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            {isLoading ? 'Processing...' : submitButtonLabel}
+            {isLoading ? "Processing..." : submitButtonLabel}
           </Button>
         </div>
       </form>
     </Card>
-  )
+  );
 }

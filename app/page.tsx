@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCompany } from '@/context/CompanyContext'
@@ -14,7 +14,6 @@ import { UserProfileMenu } from '@/components/UserProfileMenu'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const DEFAULT_ITEMS_PER_PAGE = 5
 
@@ -24,7 +23,6 @@ export default function HomePage() {
   const { toast } = useToast()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE)
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -53,9 +51,8 @@ export default function HomePage() {
       query: searchQuery,
       page: currentPage,
       limit: itemsPerPage,
-      sortOrder,
     })
-  }, [currentPage, itemsPerPage, searchQuery, sortOrder, isAuthenticated, fetchCompanies])
+  }, [currentPage, itemsPerPage, searchQuery, isAuthenticated, fetchCompanies])
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
@@ -121,21 +118,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Search Bar & Sort */}
-        <div className="mb-6 flex gap-2">
+        {/* Search Bar */}
+        <div className="mb-6">
           <SearchBar onSearch={handleSearchChange} />
-          <Select value={sortOrder} onValueChange={(val: 'asc' | 'desc') => {
-            setSortOrder(val)
-            setCurrentPage(1)
-          }}>
-            <SelectTrigger className="w-[120px] bg-card border-border">
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asc">A - Z</SelectItem>
-              <SelectItem value="desc">Z - A</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Entity List */}
