@@ -1,89 +1,104 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import Link from 'next/link'
-import { useCompany } from '@/context/CompanyContext'
-import { useAuth } from '@/context/AuthContext'
-import { CompanyForm } from '@/components/CompanyForm'
-import { Company, CompanyFormData } from '@/lib/types'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { useCompany } from "@/context/CompanyContext";
+import { useAuth } from "@/context/AuthContext";
+import { CompanyForm } from "@/components/CompanyForm";
+import { Company, CompanyFormData } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function EditPage() {
-  const router = useRouter()
-  const params = useParams()
-  const { updateCompany, getCompanyById, companies } = useCompany()
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [company, setCompany] = useState<Company | null>(null)
+  const router = useRouter();
+  const params = useParams();
+  const { updateCompany, getCompanyById, companies } = useCompany();
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [company, setCompany] = useState<Company | null>(null);
+  const canManageEntities = user?.role === "admin";
 
-  const id = params.id as string
+  const id = params.id as string;
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [isAuthLoading, isAuthenticated, router])
+  }, [isAuthLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const foundCompany = getCompanyById(id)
+    if (!isAuthLoading && isAuthenticated && !canManageEntities) {
+      toast({
+        variant: "destructive",
+        title: "Access denied",
+        description: "This account can only search entities.",
+      });
+      router.replace("/");
+    }
+  }, [canManageEntities, isAuthLoading, isAuthenticated, router, toast]);
+
+  useEffect(() => {
+    if (isAuthenticated && canManageEntities) {
+      const foundCompany = getCompanyById(id);
       if (foundCompany) {
-        setCompany(foundCompany)
+        setCompany(foundCompany);
       } else {
         toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Entity not found',
-        })
-        router.push('/')
+          variant: "destructive",
+          title: "Error",
+          description: "Entity not found",
+        });
+        router.push("/");
       }
     }
-  }, [id, getCompanyById, router, toast, isAuthenticated])
+  }, [canManageEntities, id, getCompanyById, router, toast, isAuthenticated]);
 
   const isDuplicate = (englishName: string, currentName?: string) => {
-    const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, '')
-    const normalizedCurrent = currentName?.toLowerCase().replace(/[\s,.]/g, '') || ''
+    const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, "");
+    const normalizedCurrent =
+      currentName?.toLowerCase().replace(/[\s,.]/g, "") || "";
 
     if (normalizedInput === normalizedCurrent) {
-      return false // Same entity, not a duplicate
+      return false; // Same entity, not a duplicate
     }
 
     return companies.some((company) => {
-      const normalizedExisting = company.englishName.toLowerCase().replace(/[\s,.]/g, '')
-      return normalizedExisting === normalizedInput
-    })
-  }
+      const normalizedExisting = company.englishName
+        .toLowerCase()
+        .replace(/[\s,.]/g, "");
+      return normalizedExisting === normalizedInput;
+    });
+  };
 
   const handleSubmit = async (data: CompanyFormData) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const result = await updateCompany(id, data)
+      const result = await updateCompany(id, data);
       toast({
-        title: 'Success',
+        title: "Success",
         description: result.message || `${data.englishName} has been updated`,
-      })
-      router.push('/')
+      });
+      router.push("/");
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to update entity',
-      })
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update entity",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  if (isAuthLoading || !isAuthenticated) {
+  if (isAuthLoading || !isAuthenticated || !canManageEntities) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
   if (!company) {
@@ -91,7 +106,7 @@ export default function EditPage() {
       <main className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </main>
-    )
+    );
   }
 
   return (
@@ -117,9 +132,7 @@ export default function EditPage() {
             <p className="text-muted-foreground text-sm font-mono mb-2">
               ID: {company.slug}
             </p>
-            <p className="text-muted-foreground">
-              Update entity information
-            </p>
+            <p className="text-muted-foreground">Update entity information</p>
           </div>
 
           <CompanyForm
@@ -136,5 +149,5 @@ export default function EditPage() {
         </div>
       </div>
     </main>
-  )
+  );
 }

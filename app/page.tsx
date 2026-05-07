@@ -1,93 +1,101 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useCompany } from '@/context/CompanyContext'
-import { useAuth } from '@/context/AuthContext'
-import { SearchBar } from '@/components/SearchBar'
-import { CompanyList } from '@/components/CompanyList'
-import { DeleteConfirmModal } from '@/components/DeleteConfirmModal'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { Pagination } from '@/components/Pagination'
-import { UserProfileMenu } from '@/components/UserProfileMenu'
-import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCompany } from "@/context/CompanyContext";
+import { useAuth } from "@/context/AuthContext";
+import { SearchBar } from "@/components/SearchBar";
+import { CompanyList } from "@/components/CompanyList";
+import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Pagination } from "@/components/Pagination";
+import { UserProfileMenu } from "@/components/UserProfileMenu";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-const DEFAULT_ITEMS_PER_PAGE = 5
+const DEFAULT_ITEMS_PER_PAGE = 5;
 
 export default function HomePage() {
-  const { fetchCompanies, deleteCompany, companies, totalCompanies, isLoading: isDataLoading } = useCompany()
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
-  const { toast } = useToast()
-  const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE)
+  const {
+    fetchCompanies,
+    deleteCompany,
+    companies,
+    totalCompanies,
+    isLoading: isDataLoading,
+  } = useCompany();
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [deleteConfirm, setDeleteConfirm] = useState<{
-    id: string
-    name: string
-  } | null>(null)
+    id: string;
+    name: string;
+  } | null>(null);
+  const canManageEntities = user?.role === "admin";
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [isAuthLoading, isAuthenticated, router])
+  }, [isAuthLoading, isAuthenticated, router]);
 
-  const totalPages = Math.max(1, Math.ceil(totalCompanies / itemsPerPage))
-  const startNumber = (currentPage - 1) * itemsPerPage + 1
+  const totalPages = Math.max(1, Math.ceil(totalCompanies / itemsPerPage));
+  const startNumber = (currentPage - 1) * itemsPerPage + 1;
 
   useEffect(() => {
     if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
+      setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages])
+  }, [currentPage, totalPages]);
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated) return;
     fetchCompanies({
       query: searchQuery,
       page: currentPage,
       limit: itemsPerPage,
-    })
-  }, [currentPage, itemsPerPage, searchQuery, isAuthenticated, fetchCompanies])
+    });
+  }, [currentPage, itemsPerPage, searchQuery, isAuthenticated, fetchCompanies]);
 
   const handleSearchChange = (query: string) => {
-    setSearchQuery(query)
-    setCurrentPage(1)
-  }
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
 
   const handleDeleteClick = (id: string, name: string) => {
-    setDeleteConfirm({ id, name })
-  }
+    setDeleteConfirm({ id, name });
+  };
 
   const handleConfirmDelete = async () => {
     if (deleteConfirm) {
       try {
-        const result = await deleteCompany(deleteConfirm.id)
+        const result = await deleteCompany(deleteConfirm.id);
         toast({
-          title: 'Success',
-          description: result.message || `${deleteConfirm.name} has been deleted`,
-        })
+          title: "Success",
+          description:
+            result.message || `${deleteConfirm.name} has been deleted`,
+        });
       } catch (error) {
         toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to delete entity',
-        })
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to delete entity",
+        });
       }
-      setDeleteConfirm(null)
+      setDeleteConfirm(null);
     }
-  }
+  };
 
   if (isAuthLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -109,12 +117,14 @@ export default function HomePage() {
             <p className="text-muted-foreground">Manage entity registrations</p>
           </div>
           <div className="flex gap-3 items-center">
-            <Link href="/create">
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-                <Plus className="h-5 w-5" />
-                New Entity
-              </Button>
-            </Link>
+            {canManageEntities && (
+              <Link href="/create">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+                  <Plus className="h-5 w-5" />
+                  New Entity
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -132,9 +142,13 @@ export default function HomePage() {
           ) : totalCompanies === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">
-                {searchQuery ? `No entities match your search "${searchQuery}"` : "No entities yet. Create your first entity to get started."}
+                {searchQuery
+                  ? `No entities match your search "${searchQuery}"`
+                  : canManageEntities
+                    ? "No entities yet. Create your first entity to get started."
+                    : "No entities available yet."}
               </p>
-              {!searchQuery && (
+              {!searchQuery && canManageEntities && (
                 <Link href="/create">
                   <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     Create Entity
@@ -147,10 +161,11 @@ export default function HomePage() {
               <CompanyList
                 companies={companies}
                 startNumber={startNumber}
+                canManage={canManageEntities}
                 onDelete={(id) => {
-                  const company = companies.find((c) => c.id === id)
+                  const company = companies.find((c) => c.id === id);
                   if (company) {
-                    handleDeleteClick(id, company.englishName)
+                    handleDeleteClick(id, company.englishName);
                   }
                 }}
               />
@@ -160,8 +175,8 @@ export default function HomePage() {
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={(value) => {
-                  setItemsPerPage(value)
-                  setCurrentPage(1)
+                  setItemsPerPage(value);
+                  setCurrentPage(1);
                 }}
               />
             </>
@@ -170,12 +185,14 @@ export default function HomePage() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={!!deleteConfirm}
-        companyName={deleteConfirm?.name || ''}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteConfirm(null)}
-      />
+      {canManageEntities && (
+        <DeleteConfirmModal
+          isOpen={!!deleteConfirm}
+          companyName={deleteConfirm?.name || ""}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
     </main>
-  )
+  );
 }

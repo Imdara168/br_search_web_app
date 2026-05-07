@@ -1,140 +1,158 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useCompany } from '@/context/CompanyContext'
-import { useAuth } from '@/context/AuthContext'
-import { CompanyForm } from '@/components/CompanyForm'
-import { ExcelUpload } from '@/components/ExcelUpload'
-import { BulkImportPreview } from '@/components/BulkImportPreview'
-import { CompanyFormData } from '@/lib/types'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useCompany } from "@/context/CompanyContext";
+import { useAuth } from "@/context/AuthContext";
+import { CompanyForm } from "@/components/CompanyForm";
+import { ExcelUpload } from "@/components/ExcelUpload";
+import { BulkImportPreview } from "@/components/BulkImportPreview";
+import { CompanyFormData } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CreatePage() {
-  const router = useRouter()
-  const { addCompany, companies, refreshCompanies } = useCompany()
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuth()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [excelData, setExcelData] = useState<CompanyFormData[]>([])
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const router = useRouter();
+  const { addCompany, companies, refreshCompanies } = useCompany();
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [excelData, setExcelData] = useState<CompanyFormData[]>([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const canManageEntities = user?.role === "admin";
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [isAuthLoading, isAuthenticated, router])
+  }, [isAuthLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated && !canManageEntities) {
+      toast({
+        variant: "destructive",
+        title: "Access denied",
+        description: "This account can only search entities.",
+      });
+      router.replace("/");
+    }
+  }, [canManageEntities, isAuthLoading, isAuthenticated, router, toast]);
 
   useEffect(() => {
     if (excelData.length === 0) {
-      setIsPreviewOpen(false)
+      setIsPreviewOpen(false);
     }
-  }, [excelData])
+  }, [excelData]);
 
   const isDuplicate = (englishName: string) => {
-    const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, '')
+    const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, "");
     return companies.some((company) => {
-      const normalizedExisting = company.englishName.toLowerCase().replace(/[\s,.]/g, '')
-      return normalizedExisting === normalizedInput
-    })
-  }
+      const normalizedExisting = company.englishName
+        .toLowerCase()
+        .replace(/[\s,.]/g, "");
+      return normalizedExisting === normalizedInput;
+    });
+  };
 
   const handleSubmit = async (data: CompanyFormData) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/registrations/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/v1/registrations/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name_en: data.englishName,
+            name_kh: data.khmerName,
+            entity_code: data.entityCode,
+          }),
         },
-        body: JSON.stringify({
-          name_en: data.englishName,
-          name_kh: data.khmerName,
-          entity_code: data.entityCode,
-        }),
-      })
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to create registration')
+        throw new Error("Failed to create registration");
       }
-      
-      const result = await response.json()
-      
+
+      const result = await response.json();
+
       // Update local state via context if needed, or just re-fetch on home
-      addCompany(data) 
-      
+      addCompany(data);
+
       toast({
-        title: 'Success',
+        title: "Success",
         description: result.message || `${data.englishName} has been created`,
-      })
-      router.push('/')
+      });
+      router.push("/");
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to create entity',
-      })
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create entity",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleBulkImport = async (data: CompanyFormData[]) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const token = localStorage.getItem('token')
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+      const token = localStorage.getItem("token");
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
       const response = await fetch(`${baseUrl}/api/v1/registrations/import`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          data: data.map(item => ({
+          data: data.map((item) => ({
             name_en: item.englishName,
             name_kh: item.khmerName,
             entity_code: item.entityCode,
-          }))
+          })),
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to import entities')
+        throw new Error("Failed to import entities");
       }
 
-      const result = await response.json()
-      
-      await refreshCompanies()
-      setExcelData([])
+      const result = await response.json();
+
+      await refreshCompanies();
+      setExcelData([]);
       toast({
-        title: 'Success',
-        description: result.message || 'Import Successfully!',
-      })
-      router.push('/')
+        title: "Success",
+        description: result.message || "Import Successfully!",
+      });
+      router.push("/");
     } catch (error: any) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to import entities',
-      })
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to import entities",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  if (isAuthLoading || !isAuthenticated) {
+  if (isAuthLoading || !isAuthenticated || !canManageEntities) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -194,15 +212,19 @@ export default function CreatePage() {
             isOpen={isPreviewOpen}
             onOpenChange={setIsPreviewOpen}
             isDuplicate={(englishName) => {
-              const normalizedInput = englishName.toLowerCase().replace(/[\s,.]/g, '')
+              const normalizedInput = englishName
+                .toLowerCase()
+                .replace(/[\s,.]/g, "");
               return companies.some((company) => {
-                const normalizedExisting = company.englishName.toLowerCase().replace(/[\s,.]/g, '')
-                return normalizedExisting === normalizedInput
-              })
+                const normalizedExisting = company.englishName
+                  .toLowerCase()
+                  .replace(/[\s,.]/g, "");
+                return normalizedExisting === normalizedInput;
+              });
             }}
           />
         )}
       </div>
     </main>
-  )
+  );
 }

@@ -1,14 +1,21 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff, Loader2, LogOut, LockKeyhole, User as UserIcon } from 'lucide-react'
-import { useForm } from 'react-hook-form'
-import * as z from 'zod'
-import { useAuth } from '@/context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  LogOut,
+  LockKeyhole,
+  User as UserIcon,
+} from "lucide-react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +23,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +31,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   Form,
   FormControl,
@@ -32,31 +39,31 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 const changePasswordSchema = z
   .object({
     old_password: z.string().min(1, {
-      message: 'Current password is required.',
+      message: "Current password is required.",
     }),
     new_password: z.string().min(6, {
-      message: 'New password must be at least 6 characters.',
+      message: "New password must be at least 6 characters.",
     }),
     confirm_password: z.string().min(1, {
-      message: 'Confirm your new password.',
+      message: "Confirm your new password.",
     }),
   })
   .refine((values) => values.new_password === values.confirm_password, {
-    message: 'Passwords do not match.',
-    path: ['confirm_password'],
-  })
+    message: "Passwords do not match.",
+    path: ["confirm_password"],
+  });
 
-type ChangePasswordFormData = z.infer<typeof changePasswordSchema>
+type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 function getInitials(fullname?: string) {
   if (!fullname) {
-    return 'U'
+    return "U";
   }
 
   const initials = fullname
@@ -65,60 +72,60 @@ function getInitials(fullname?: string) {
     .filter(Boolean)
     .slice(0, 2)
     .map((name) => name[0])
-    .join('')
-    .toUpperCase()
+    .join("")
+    .toUpperCase();
 
-  return initials || 'U'
+  return initials || "U";
 }
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
-    return error.message
+    return error.message;
   }
 
-  return 'Failed to change password.'
+  return "Failed to change password.";
 }
 
 export function UserProfileMenu() {
-  const { user, signOut, changePassword } = useAuth()
-  const { toast } = useToast()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showOldPassword, setShowOldPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const { user, signOut, changePassword } = useAuth();
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: {
-      old_password: '',
-      new_password: '',
-      confirm_password: '',
+      old_password: "",
+      new_password: "",
+      confirm_password: "",
     },
-  })
+  });
 
   async function onSubmit(values: ChangePasswordFormData) {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       await changePassword({
         old_password: values.old_password,
         new_password: values.new_password,
-      })
-      form.reset()
-      setIsDialogOpen(false)
+      });
+      form.reset();
+      setIsDialogOpen(false);
       toast({
-        title: 'Password updated',
-        description: 'Use your new password the next time you sign in.',
-      })
+        title: "Password updated",
+        description: "Use your new password the next time you sign in.",
+      });
     } catch (error) {
       toast({
-        title: 'Password not changed',
+        title: "Password not changed",
         description: getErrorMessage(error),
-        variant: 'destructive',
-      })
+        variant: "destructive",
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -144,7 +151,13 @@ export function UserProfileMenu() {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="flex items-center gap-2">
             <UserIcon className="h-4 w-4" />
-            <span className="truncate">{user?.fullname}</span>
+            <div className="min-w-0">
+              <div className="truncate">{user?.fullname}</div>
+              <div className="truncate text-xs font-normal text-muted-foreground">
+                {user?.username} {"-"}{" "}
+                {user?.role === "admin" ? "Admin" : "Search only"}
+              </div>
+            </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setIsDialogOpen(true)}>
@@ -179,7 +192,7 @@ export function UserProfileMenu() {
                     <FormControl>
                       <div className="relative">
                         <Input
-                          type={showOldPassword ? 'text' : 'password'}
+                          type={showOldPassword ? "text" : "password"}
                           autoComplete="current-password"
                           {...field}
                         />
@@ -200,18 +213,18 @@ export function UserProfileMenu() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                  )}
-                  />
-                  <FormField
-                  control={form.control}
-                  name="new_password"
-                  render={({ field }) => (
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="new_password"
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>New password</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
-                          type={showNewPassword ? 'text' : 'password'}
+                          type={showNewPassword ? "text" : "password"}
                           autoComplete="new-password"
                           {...field}
                         />
@@ -232,18 +245,18 @@ export function UserProfileMenu() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                  )}
-                  />
-                  <FormField
-                  control={form.control}
-                  name="confirm_password"
-                  render={({ field }) => (
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirm_password"
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Confirm new password</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
-                          type={showConfirmPassword ? 'text' : 'password'}
+                          type={showConfirmPassword ? "text" : "password"}
                           autoComplete="new-password"
                           {...field}
                         />
@@ -252,7 +265,9 @@ export function UserProfileMenu() {
                           variant="ghost"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
                         >
                           {showConfirmPassword ? (
                             <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -264,8 +279,9 @@ export function UserProfileMenu() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                  )}
-                  />              <DialogFooter>
+                )}
+              />
+              <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
@@ -275,9 +291,7 @@ export function UserProfileMenu() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Update password
                 </Button>
               </DialogFooter>
@@ -286,5 +300,5 @@ export function UserProfileMenu() {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

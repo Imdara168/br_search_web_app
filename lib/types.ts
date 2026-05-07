@@ -34,6 +34,8 @@ export interface ApiMessageResponse {
 
 export interface User {
   fullname: string;
+  role: "admin" | "search_only";
+  username: string;
 }
 
 export interface ChangePasswordData {
